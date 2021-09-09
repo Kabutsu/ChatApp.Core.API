@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ChatApp.Core.API.Database.Repositories.Interfaces;
 using ChatApp.Core.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -21,11 +22,13 @@ namespace ChatApp.Core.API.Controllers
 
         private readonly ILogger<UsersController> _logger;
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IUserRepository _userRepository;
 
-        public UsersController(ILogger<UsersController> logger, IHubContext<ChatHub> hubContext)
+        public UsersController(ILogger<UsersController> logger, IHubContext<ChatHub> hubContext, IUserRepository userRepository)
         {
             _logger = logger;
             _hubContext = hubContext;
+            _userRepository = userRepository;
         }
 
         [HttpGet]
@@ -44,25 +47,41 @@ namespace ChatApp.Core.API.Controllers
         [HttpGet("all")]
         public IEnumerable<UserDto> GetAll()
         {
-            return Enumerable.Range(1, 1).Select(i => new UserDto
-            {
-                Id = Guid.NewGuid(),
-                Username = "Sam",
-            })
-            .ToArray();
+            return _userRepository
+                .GetAll()
+                .Select(x => new UserDto
+                {
+                    Id = Guid.Parse(x.UserId),
+                    Username = x.Username,
+                })
+                .ToList();
         }
 
         [HttpGet("{userId:guid}")]
-        public UserDto GetUser(Guid userId)
+        public async Task<UserDto> GetUser(Guid userId)
         {
+            var user = await _userRepository.Get(userId.ToString());
             return new UserDto
             {
-                Id = userId,
-                Username = "Sam",
+                Id = Guid.Parse(user.UserId),
+                Username = user.Username,
             };
         }
 
-        // ToDo:
-        // HttpPost("register")
+        [HttpPost("register")]
+        public async Task<UserDto> AddUser(UserDto user)
+        {
+            var newUser = await _userRepository.Add(new Database.Entities.User
+            {
+                UserId = user.Id.ToString(),
+                Username = user.Username,
+            });
+
+            return new UserDto
+            {
+                Id = Guid.Parse(newUser.UserId),
+                Username = newUser.Username,
+            };
+        }
     }
 }

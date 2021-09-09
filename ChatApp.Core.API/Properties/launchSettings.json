@@ -20,7 +20,7 @@
     "ChatApp.Core.API": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "users",
+      "launchUrl": "users/all",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
