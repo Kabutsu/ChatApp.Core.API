@@ -7,7 +7,7 @@ namespace ChatApp.Core.API.Models
 {
     public class UserDto
     {
-        public string UserId { get; set; }
-        public string UserName { get; set; }
+        public Guid Id { get; set; }
+        public string Username { get; set; }
     }
 }

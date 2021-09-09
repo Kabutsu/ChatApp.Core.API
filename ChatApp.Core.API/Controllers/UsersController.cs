@@ -46,19 +46,19 @@ namespace ChatApp.Core.API.Controllers
         {
             return Enumerable.Range(1, 1).Select(i => new UserDto
             {
-                UserId = "abc",
-                UserName = "Sam",
+                Id = Guid.NewGuid(),
+                Username = "Sam",
             })
             .ToArray();
         }
 
-        [HttpGet("{userId}")]
-        public UserDto GetUser(string userId)
+        [HttpGet("{userId:guid}")]
+        public UserDto GetUser(Guid userId)
         {
             return new UserDto
             {
-                UserId = userId,
-                UserName = "Sam",
+                Id = userId,
+                Username = "Sam",
             };
         }
 

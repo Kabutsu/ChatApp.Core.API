@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using ChatApp.Core.API.Database.Entities;
+using ChatApp.Core.API.Database.Repositories.Interfaces;
 using ChatApp.Core.API.Hubs.Interfaces;
 using ChatApp.Core.API.Managers;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace SignalRChat.Hubs
 {
@@ -11,6 +14,15 @@ namespace SignalRChat.Hubs
     {
         private readonly static ConnectionMapping<string> _connections =
             new ConnectionMapping<string>();
+
+        private readonly IUserRepository _userRepository;
+        private readonly IConnectionRepository _connectionRepository;
+
+        public ChatHub(IUserRepository userRepository, IConnectionRepository connectionRepository)
+        {
+            _userRepository = userRepository;
+            _connectionRepository = connectionRepository;
+        }
 
         public async Task SendMessage(string to, string from, string message)
         {
@@ -22,14 +34,40 @@ namespace SignalRChat.Hubs
 
         public async Task SendBroadcastMessage(string from, string message)
         {
-            await Clients.AllExcept(_connections.GetConnections(from).ToList()).ReceivePrivateMessage($"{from} says: \"{message}\"!");
+            var connections = _userRepository
+                .GetAll()
+                    .Include(x => x.Connections)
+                .FirstOrDefault(x => x.Username == from)
+                .Connections
+                .Select(x => x.ConnectionId);
+
+            await Clients.AllExcept(connections.ToList()).ReceivePrivateMessage($"{from} says: \"{message}\"!");
         }
 
         public override Task OnConnectedAsync()
         {
             string name = Context.GetHttpContext().Request.Query["username"];
+            var userId = Guid.NewGuid().ToString();
 
             _connections.Add(name, Context.ConnectionId);
+
+            var user = new User
+            {
+                UserId = userId,
+                Username = name,
+            };
+
+            var connection = new Connection
+            {
+                UserId = userId,
+                ConnectionId = Context.ConnectionId,
+            };
+
+            _userRepository.Add(user);
+            _userRepository.SaveChangesAsync();
+
+            _connectionRepository.Add(connection);
+            _connectionRepository.SaveChangesAsync();
 
             return base.OnConnectedAsync();
         }

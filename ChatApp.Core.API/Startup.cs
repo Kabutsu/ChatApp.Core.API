@@ -2,10 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ChatApp.Core.API.Database.Context;
+using ChatApp.Core.API.Database.Repositories;
+using ChatApp.Core.API.Extensions;
+using Microsoft.AspNet.SignalR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,6 +43,9 @@ namespace ChatApp.Core.API
                         .AllowAnyHeader();
                 });
             });
+
+            services.AddChatAppDbContext();
+            services.AddEfRepositories();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -55,6 +63,17 @@ namespace ChatApp.Core.API
             app.UseCors();
 
             app.UseAuthorization();
+
+            GlobalHost.DependencyResolver.Register(
+                typeof(ChatHub),
+                () =>
+                {
+                    var optionsBuilder = new DbContextOptionsBuilder<ChatAppDbContext>();
+                    optionsBuilder.UseInMemoryDatabase("ChatAppDB");
+
+                    var context = new ChatAppDbContext(optionsBuilder.Options);
+                    return new ChatHub(new UserRepository(context), new ConnectionRepository(context));
+                });
 
             app.UseEndpoints(endpoints =>
             {
